@@ -2,7 +2,10 @@
 gcc -o filetoarray filetoarray.c
 
 > to create filearray <
-filetoarray "index.html.gz" > web_index.h
+filetoarray -o web_index.h index.html.gz 
+
+> to print help message <
+filetoarray -h
 
 I advise to use my Online version at
 
