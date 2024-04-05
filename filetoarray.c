@@ -43,14 +43,16 @@
 #define INCLUDE_GUARD_END "#endif /* %s */\n"
 
 #define USAGE "Usage: filetoarray [options] file...\n"
-#define HELP                                        \
-  USAGE                                             \
-  "Options:\n"                                      \
-  "  -h           Display this information.\n"      \
-  "  -i <width>   Set indentation width.\n"         \
-  "  -o <file>    Place the output into <file>. \n" \
-  "  -p           Use PROGMEM modifier.\n"          \
-  "  -v           Display version information.\n"
+#define HELP                                                           \
+  USAGE                                                                \
+  "Options:\n"                                                         \
+  "  -g <guard>      Specify a custom include guard.\n"                \
+  "  -h              Display this information.\n"                      \
+  "  -i <width>      Set indentation width.\n"                         \
+  "  -l <elements>   Specify the number of array elements per line.\n" \
+  "  -o <file>       Place the output into <file>. \n"                 \
+  "  -p              Use PROGMEM modifier.\n"                          \
+  "  -v              Display version information.\n"
 
 enum type
 {
@@ -69,8 +71,10 @@ struct config_s
   char *input_filename;
   char *output_filename;
   size_t indent;
+  size_t bytes_per_line;
   bool progmem;
-} config_s_default = {MODE_PROCESS, NULL, DEFAULT_OUTPUT_FILENAME, DEFAULT_LINE_INDENT, false};
+  char *include_guard;
+} config_s_default = {MODE_PROCESS, NULL, DEFAULT_OUTPUT_FILENAME, DEFAULT_LINE_INDENT, BYTES_PER_LINE, false, NULL};
 
 typedef struct config_s config;
 
@@ -127,6 +131,15 @@ char *transform_to_lowercase(char *string)
   return string;
 }
 
+char *get_include_guard(char *dest, const config *configuration)
+{
+  if (configuration->include_guard)
+  {
+    return strcpy(dest, configuration->include_guard);
+  }
+  return get_varname_from(configuration->output_filename, dest, MAX_NAME_LENGTH);
+}
+
 void print_last_modified(FILE *output, const char *variable_name)
 {
   time_t now = time(NULL);
@@ -138,13 +151,14 @@ void print_last_modified(FILE *output, const char *variable_name)
 
 void print_content(FILE *input, FILE *output, const config *configuration)
 {
+  const size_t bytes_per_line = configuration->bytes_per_line ? configuration->bytes_per_line : SIZE_MAX;
   char buffer[DEFAULT_IO_BUFFER_SIZE];
   size_t bytes_read = 0, total_bytes = 0;
   while (bytes_read = fread(buffer, 1, sizeof(buffer), input))
   {
     for (long i = 0; i < bytes_read; i++, total_bytes++)
     {
-      bool new_line = total_bytes % BYTES_PER_LINE == 0;
+      bool new_line = (total_bytes % bytes_per_line) == 0;
       int indent = new_line ? configuration->indent : DEFAULT_ELEMENT_INDENT;
       char *line_feed = (new_line && total_bytes) ? "\n" : EMPTY;
       char *separator = total_bytes ? "," : EMPTY;
@@ -158,7 +172,7 @@ void print_source_code(FILE *input, FILE *output, int output_type, const config 
   long file_size = calculate_file_size(input);
   fprintf(output, HEADER_COMMENT, get_basename(configuration->input_filename), file_size);
   char include_guard[MAX_NAME_LENGTH + 1];
-  get_varname_from(configuration->output_filename, include_guard, MAX_NAME_LENGTH);
+  get_include_guard(include_guard, configuration);
   if (output_type == TYPE_DECLARATION)
   {
     fprintf(output, INCLUDE_GUARD, include_guard, include_guard);
@@ -280,6 +294,20 @@ const config *parse_run_configuration(int argc, char *argv[], config *dest)
       if (value)
       {
         dest->indent = atoi(argv[index]);
+      }
+      value = !value;
+      break;
+    case 'g':
+      if (value)
+      {
+        dest->include_guard = argv[index];
+      }
+      value = !value;
+      break;
+    case 'l':
+      if (value)
+      {
+        dest->bytes_per_line = atol(argv[index]);
       }
       value = !value;
       break;
