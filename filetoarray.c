@@ -36,8 +36,8 @@
 
 #define INLCUDE_HEADER_FILE "#include \"%s\"\n"
 #define PROGMEM_IMPORT "#if defined ESP8266\n"   \
-                        "#include <pgmspace.h>\n" \
-                        "#endif\n\n"
+                       "#include <pgmspace.h>\n" \
+                       "#endif\n\n"
 #define INCLUDE_GUARD "#ifndef %s\n" \
                       "#define %s\n\n"
 #define INCLUDE_GUARD_END "#endif /* %s */\n"
@@ -180,8 +180,7 @@ void print_source_code(FILE *input, FILE *output, int output_type, const config 
     modifier = " PROGMEM";
     fprintf(output, PROGMEM_IMPORT);
   }
-  char *storage_class = (output_type == TYPE_DEFINITION) ? "" : (output_type == TYPE_DECLARATION) ? "extern "
-                                                                                                  : "static ";
+  char *storage_class = (output_type == TYPE_DECLARATION) ? "extern " : EMPTY;
   transform_to_lowercase(variable_name);
   fprintf(output, ARRAY_DECLARATION, storage_class, variable_name, file_size, modifier);
   if (output_type & TYPE_DEFINITION)
